@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.2">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="SignalR" enabled="true">
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="SendToGroup  JSR223" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">5</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
+        <boolProp name="ThreadGroup.delayedStart">false</boolProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <stringProp name="TestPlan.comments">Groovy</stringProp>
+      </ThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Open connection" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">false</stringProp>
+          <stringProp name="script">package azure.signalr.groovy
+
+import azure.signalr.ConnectionBundle
+import azure.signalr.SignalRUtil
+import azure.signalr.sampler.ConnectionBundleOpenConnectionSampler
+import com.microsoft.signalr.HttpHubConnectionBuilder
+import com.microsoft.signalr.HubConnection
+import com.microsoft.signalr.HubConnectionBuilder
+import org.apache.jmeter.samplers.SampleResult as SR
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+Logger log = LoggerFactory.getLogger(ConnectionBundleOpenConnectionSampler.class);
+
+// get webAppUrl from environment variable
+String webAppUrl = System.getenv(&quot;webAppUrl&quot;);
+if (webAppUrl == null) {
+    webAppUrl = &quot;http://localhost:5000/bench&quot;;
+}
+log.info(&quot;WebAppUrl: &quot; + webAppUrl);
+
+// get connectionCountTotal from environment variable
+String connectionCountTotalStr = System.getenv(&quot;connectionCountTotal&quot;);
+if (connectionCountTotalStr == null) {
+    connectionCountTotalStr = &quot;1&quot;;
+}
+log.info(&quot;connectionCountTotal: &quot; + connectionCountTotalStr);
+int connectionCountTotal = Integer.parseInt(connectionCountTotalStr);
+int totalThreads = ctx.getThreadGroup().getNumberOfThreads()
+log.info(&quot;Total threads configured in current thread group: &quot; + totalThreads)
+int connectionCountPerBundle = connectionCountTotal / totalThreads
+if (connectionCountPerBundle &lt;= 0) {
+    connectionCountPerBundle = 1
+}
+log.info(&quot;connectionCountPerBundle: &quot; + connectionCountPerBundle);
+
+// get group size from environment variable
+String groupSizeStr = System.getenv(&quot;groupSize&quot;);
+if (groupSizeStr == null) {
+    // each connection will belong to its own group by default
+    groupSizeStr = &quot;1&quot;;
+}
+log.info(&quot;groupSize: &quot; + groupSizeStr);
+int groupSize = Integer.parseInt(groupSizeStr);
+
+// Create a connection builder
+HttpHubConnectionBuilder connectionBuilder = HubConnectionBuilder.create(webAppUrl);
+
+// Pass in connectionBuilder, connectionCount, groupSize to create a connectionBundle
+// The connectionCountPerBundle is the number of connections in this connectionBundle
+// The group size is the number of connections that will be assign the same group name. The group name has a prefix of the JMeter instance and bundle index and
+ConnectionBundle connectionBundle = new ConnectionBundle(connectionBuilder, connectionCountPerBundle, groupSize);
+
+SignalRUtil.SetThreadLocalHubConnectionBundle(connectionBundle);
+
+//setup callback on every hub connection
+for (int i = 0; i &lt; connectionBundle.GetConnectionCount(); i++) {
+    HubConnection hubConnection = connectionBundle.GetHubConnection(i);
+    final String callBackMethodName = &quot;Receive&quot;;
+    hubConnection.on(callBackMethodName, (Long startTime, String paylod) -&gt; {
+        long endTime = System.currentTimeMillis();
+        log.info(callBackMethodName + &quot; &quot; + paylod.length() + &quot; bytes after &quot; + (endTime-startTime) + &quot; milliseconds&quot;);
+        SR sr = SR.createTestSample(startTime, endTime);
+        sr.setSampleLabel(callBackMethodName + &quot; From Server&quot;);
+        sr.setSuccessful(true);
+        connectionBundle.AddResult(sr);
+    }, Long.class, String.class);
+}
+
+// start connection bundle
+SR sr = connectionBundle.Start();
+
+SignalRUtil.FlushSampleResult(sr, SampleResult);</stringProp>
+          <stringProp name="TestPlan.comments">src/main/java/azure/signalr/groovy/ConnectionBundleOpenConnection.groovy</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Join Group" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"></stringProp>
+          <stringProp name="filename"></stringProp>
+          <stringProp name="cacheKey">false</stringProp>
+          <stringProp name="script">package azure.signalr.groovy
+
+import azure.signalr.ConnectionBundle
+import azure.signalr.SignalRUtil
+import azure.signalr.sampler.ConnectionBundleInvokeSampler
+import com.microsoft.signalr.HubConnection
+import com.microsoft.signalr.HubConnectionState
+import org.apache.jmeter.samplers.SampleResult as SR
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+import java.util.concurrent.TimeUnit
+
+Logger log = LoggerFactory.getLogger(ConnectionBundleInvokeSampler.class);
+
+SR sr = new SR();
+sr.sampleStart();
+sr.setSampleLabel(&quot;Batch JoinGroup&quot;);
+
+log.debug(&quot;Start invoking JoinGroup&quot;);
+// This(JoinGroup) is an example of invoke method
+ConnectionBundle connectionBundle = SignalRUtil.GetThreadLocalConnectionBundle();
+for (int i = 0; i &lt; connectionBundle.GetConnectionCount(); i++) {
+    HubConnection hubConnection = connectionBundle.GetHubConnection(i);
+    // If the connection is not connected, skip it
+    if (hubConnection.getConnectionState() == HubConnectionState.CONNECTED) {
+        try {
+            String groupName = connectionBundle.GetGroupName(i);
+            long startTime = System.currentTimeMillis();
+            // This is not blocking.
+            connectionBundle.GetHubConnection(i).invoke(&quot;JoinGroup&quot;, groupName)
+                    .timeout(5, TimeUnit.SECONDS)
+                    .subscribe(() -&gt; {
+                        SR joinSampleResult = SR.createTestSample(startTime, System.currentTimeMillis());
+                        joinSampleResult.setSampleLabel(&quot;JoinGroup&quot;);
+                        joinSampleResult.setSuccessful(true);
+                        connectionBundle.AddResult(joinSampleResult);
+                    }, throwable -&gt; {
+                        log.error(throwable.toString());
+                        SR joinSampleResult = SR.createTestSample(startTime, System.currentTimeMillis());
+                        joinSampleResult.setSampleLabel(&quot;JoinGroup&quot;);
+                        joinSampleResult.setSuccessful(false);
+                        joinSampleResult.setResponseMessage(throwable.toString());
+                        connectionBundle.AddResult(joinSampleResult);
+                    });
+
+        } catch (Exception e) {
+            // Catch the exception to allow the loop to continue
+            log.error(e.toString());
+        }
+    }
+}
+
+log.debug(&quot;finish invoking LeaveGroup&quot;);
+
+sr.sampleEnd();
+sr.setSuccessful(true);
+
+SignalRUtil.FlushSampleResult(sr, SampleResult);
+
+</stringProp>
+          <stringProp name="TestPlan.comments">src/main/java/azure/signalr/groovy/ConnectionBundleInvoke.groovy</stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <stringProp name="LoopController.loops">900</stringProp>
+        </LoopController>
+        <hashTree>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Send To Group" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">false</stringProp>
+            <stringProp name="script">package azure.signalr.groovy
+
+import azure.signalr.ConnectionBundle
+import azure.signalr.SignalRUtil
+import azure.signalr.sampler.ConnectionBundleSendSampler
+import com.microsoft.signalr.HubConnection
+import com.microsoft.signalr.HubConnectionState
+import org.apache.jmeter.samplers.SampleResult as SR
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+Logger log = LoggerFactory.getLogger(ConnectionBundleSendSampler.class);
+
+SR sr = new SR();
+sr.sampleStart()
+sr.setSampleLabel(&quot;Batch Send&quot;);
+
+// get group size from environment variable
+String payloadSizeInBytesStr = System.getenv(&quot;payloadSizeInBytes&quot;);
+if (payloadSizeInBytesStr == null) {
+    payloadSizeInBytesStr = &quot;2048&quot;;
+}
+log.info(&quot;payloadSizeInBytes: &quot; + payloadSizeInBytesStr);
+int payloadSizeInBytes = Integer.parseInt(payloadSizeInBytesStr);
+
+String sendDelayInMilliSecondsStr = System.getenv(&quot;sendDelayInMilliSeconds&quot;);
+if (sendDelayInMilliSecondsStr == null) {
+    sendDelayInMilliSecondsStr = &quot;1000&quot;;
+}
+log.info(&quot;sendDelayInMilliSeconds: &quot; + sendDelayInMilliSecondsStr);
+int sendDelayInMilliSeconds = Integer.parseInt(sendDelayInMilliSecondsStr);
+
+log.debug(&quot;Start sending message&quot;);
+ConnectionBundle connectionBundle = SignalRUtil.GetThreadLocalConnectionBundle();
+for (int i = 0; i &lt; connectionBundle.GetConnectionCount(); i++) {
+    // Send method just flush the content to the tcp buffer.
+    // It&apos;s very fast thus normally no need to track its time cost.
+    HubConnection hubConnection = connectionBundle.GetHubConnection(i);
+    // If the connection is not connected, skip it
+    if (hubConnection.getConnectionState() == HubConnectionState.CONNECTED) {
+        try {
+            String payload = SignalRUtil.GetPayloadInBytes(payloadSizeInBytes);
+            connectionBundle.GetHubConnection(i).send(&quot;SendToGroup&quot;, connectionBundle.GetGroupName(i), System.currentTimeMillis(), payload);
+            sr.setSuccessful(true);
+        } catch (Exception e) {
+            // Catch the exception to allow the loop to continue
+            log.error(e.toString());
+        }
+    }
+}
+
+sr.sampleEnd()
+log.debug(&quot;finish sending message&quot;);
+SignalRUtil.FlushSampleResult(sr, SampleResult);
+
+Thread.sleep(sendDelayInMilliSeconds)
+
+</stringProp>
+            <stringProp name="TestPlan.comments">src/main/java/azure/signalr/groovy/ConnectionBundleSend.groovy</stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="Collect" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"></stringProp>
+            <stringProp name="filename"></stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">package azure.signalr.groovy
+
+import azure.signalr.SignalRUtil
+import azure.signalr.sampler.ConnectionBundleCollectSampler
+import org.apache.jmeter.samplers.SampleResult as SR
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+Logger log = LoggerFactory.getLogger(ConnectionBundleCollectSampler.class);
+
+log.debug(&quot;Collecting sample result&quot;);
+SR sr = SignalRUtil.GetThreadLocalConnectionBundle().Collect();
+log.debug(&quot;Sample result collected&quot;);
+
+SignalRUtil.FlushSampleResult(sr, SampleResult)
+</stringProp>
+            <stringProp name="TestPlan.comments">src/main/java/azure/signalr/groovy/ConnectionBundleCollect.groovy</stringProp>
+          </JSR223Sampler>
+          <hashTree/>
+        </hashTree>
+        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="SendToGroup Java + GUI" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">5</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">300</stringProp>
+        <boolProp name="ThreadGroup.delayedStart">false</boolProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <azure.signalr.sampler.ConnectionBundleOpenConnectionSampler guiclass="azure.signalr.gui.ConnectionBundleOpenConnectionSamplerGui" testclass="azure.signalr.sampler.ConnectionBundleOpenConnectionSampler" testname="Open connection" enabled="true">
+          <stringProp name="TestPlan.comments">src/main/java/azure/signalr/sampler/ConnectionBundleOpenConnectionSampler.java</stringProp>
+        </azure.signalr.sampler.ConnectionBundleOpenConnectionSampler>
+        <hashTree/>
+        <azure.signalr.sampler.ConnectionBundleInvokeSampler guiclass="azure.signalr.gui.ConnectionBundleInvokeSamplerGui" testclass="azure.signalr.sampler.ConnectionBundleInvokeSampler" testname="Join Group" enabled="true">
+          <stringProp name="TestPlan.comments">src/main/java/azure/signalr/sampler/ConnectionBundleInvokeSampler.java</stringProp>
+        </azure.signalr.sampler.ConnectionBundleInvokeSampler>
+        <hashTree/>
+        <LoopController guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <stringProp name="LoopController.loops">900</stringProp>
+        </LoopController>
+        <hashTree>
+          <azure.signalr.sampler.ConnectionBundleSendSampler guiclass="azure.signalr.gui.ConnectionBundleSendSamplerGui" testclass="azure.signalr.sampler.ConnectionBundleSendSampler" testname="Send To Group" enabled="true">
+            <stringProp name="TestPlan.comments">src/main/java/azure/signalr/sampler/ConnectionBundleSendSampler.java</stringProp>
+          </azure.signalr.sampler.ConnectionBundleSendSampler>
+          <hashTree/>
+          <azure.signalr.sampler.ConnectionBundleCollectSampler guiclass="azure.signalr.gui.ConnectionBundleCollectSamplerGui" testclass="azure.signalr.sampler.ConnectionBundleCollectSampler" testname="Collect" enabled="true">
+            <stringProp name="TestPlan.comments">src/main/java/azure/signalr/sampler/ConnectionBundleCollectSampler.java</stringProp>
+          </azure.signalr.sampler.ConnectionBundleCollectSampler>
+          <hashTree/>
+        </hashTree>
+        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename"></stringProp>
+        </ResultCollector>
+        <hashTree/>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
