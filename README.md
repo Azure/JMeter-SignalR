@@ -6,7 +6,7 @@ This plugin allows you to test your SignalR app server, including those using Az
 
 - [Quick startup](#quick-startup)
     - [Local bench](#local-bench)
-    - [Distributed bench on Azure Load testing](#distributed-bench-on-azure-load-testing)
+    - [Distributed bench on Azure Load Testing](#distributed-bench-on-azure-load-testing)
 - [Customize](#customize)
     - [Option 1: Modify in JMeter GUI](#option-1-modify-in-jmeter-gui)
     - [Option 2: Build the plugin jar](#option-2-build-the-plugin-jar)
@@ -34,11 +34,10 @@ This plugin allows you to test your SignalR app server, including those using Az
    Place the jar in JMeter's lib/ext folder.
 2. Clone this repo and start the SignalR server in the examples/SignalRServer folder.
 3. Launch JMeter and load the SignalR.jmx script in the examples folder.
-4. Click start to begin testing.
+4. Click start to begin .
+   <kbd> ![SignalR Plugin Local Test](https://github.com/Azure/JMeter-SignalR/assets/16233725/dac69ed3-d1be-4912-87a0-fa22f4425641)</kbd>
 
-   <kbd> ![SignalR Plugin Local Test](https://github.com/bjqian/jmeter-signalr/assets/16233725/53f8c174-3c86-4dc7-bc0d-7d74c884991d)</kbd>
-
-### Distributed bench on Azure Load testing
+### Distributed bench on Azure Load Testing
 
 #### Dependencies
 
@@ -46,28 +45,28 @@ This plugin allows you to test your SignalR app server, including those using Az
 
 #### Steps
 
-1. In Azure Load testing, create a test and select "Upload a JMeter Script".
+1. In Azure Load Testing, create a test and select "Upload a JMeter Script".
 
-   <img src="https://github.com/bjqian/jmeter-signalr/assets/16233725/1c79ee69-4bc6-4637-af34-c21a6bd83b66" alt="Azure Load Test Creation" width="65%">
+   <img src="https://github.com/Azure/JMeter-SignalR/assets/16233725/76054a84-95c7-49ae-a9b6-89d8585bc6c4" alt="Azure Load Test Creation" width="65%">
 
 2. Upload the JMeter script and SignalR plugin.
 
-   <img src="https://github.com/bjqian/jmeter-signalr/assets/16233725/c8cc686b-9df1-444c-8859-3fa383e7e6dc" alt="Upload Script and Plugin" width="65%">
+   <img src="https://github.com/Azure/JMeter-SignalR/assets/16233725/3fea8c81-7f17-4d79-90c5-cfeb6ccc42f6" alt="Upload Script and Plugin" width="65%">
 
 3. Override parameters as
    needed: `webAppUrl, connectionCountTotal, groupSize, sendDelayInMilliSeconds, payloadSizeInBytes`
 
-   <img src="https://github.com/bjqian/jmeter-signalr/assets/16233725/f01e3cb7-f615-4b4e-a569-f895802ce4da" alt="Parameter Override" width="65%">
+   <img src="https://github.com/Azure/JMeter-SignalR/assets/16233725/f7d66b6e-da05-4430-8350-d9d832f930df" alt="Parameter Override" width="65%">
 
 4. Start the test and view the metrics.
 
-   <img src="https://github.com/bjqian/jmeter-signalr/assets/16233725/62bb9c0f-834c-4f44-b18f-0cadd1f5284c" alt="Start Test" width="65%">
+   <img src="https://github.com/Azure/JMeter-SignalR/assets/16233725/238449b4-8443-4177-afc8-bc76291666cb" alt="Start Test" width="65%">
 
 ## Customize
 
 ### Option 1: Modify in JMeter GUI
 
-<img src="https://github.com/bjqian/jmeter-signalr/assets/16233725/c012da3e-c15e-4d8b-ab97-b0b5e0bdaaf4" alt="JMeter GUI Customization" width="90%">
+<img src="https://github.com/Azure/JMeter-SignalR/assets/16233725/000c3ea3-216f-48c3-9ee5-e0b3c4a82f4d" alt="JMeter GUI Customization" width="90%">
 
 ### Option 2: Build the plugin jar
 
@@ -78,7 +77,7 @@ This plugin allows you to test your SignalR app server, including those using Az
 3. Find the built `JmeterSignalR.jar` in `build/libs`.
 4. Enable the disabled *SendToGroup Java + GUI*.
 
-<img src="https://github.com/bjqian/jmeter-signalr/assets/16233725/416f6d8e-749d-43b1-b6c3-990ac994636f" alt="Enable SendToGroup" width="90%">
+<img src="https://github.com/Azure/JMeter-SignalR/assets/16233725/29bceb68-8c25-400f-ba40-466256c69f38f" alt="Enable SendToGroup" width="90%">
 
 ## Under the hood
 
