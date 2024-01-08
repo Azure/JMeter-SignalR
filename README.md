@@ -30,7 +30,7 @@ This plugin allows you to test your SignalR app server, including those using Az
 
 #### Steps
 
-1. Download [Jmeter SignalR plugin (JmeterSignalR.jar)](https://github.com/bjqian/jmeter-signalr/releases/tag/v0.1).
+1. Download [Jmeter SignalR plugin (JmeterSignalR.jar)](https://github.com/Azure/JMeter-SignalR/releases/tag/v1.0).
    Place the jar in JMeter's lib/ext folder.
 2. Clone this repo and start the SignalR server in the examples/SignalRServer folder.
 3. Launch JMeter and load the SignalR.jmx script in the examples folder.
